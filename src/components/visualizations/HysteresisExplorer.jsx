@@ -27,6 +27,9 @@ export default function HysteresisExplorer() {
     const dt = 1 / (N * freq)
     let w = 0.5
     const points = []
+    const forwardPath = []  // Rising voltage (increasing V)
+    const reversePath = []  // Falling voltage (decreasing V)
+    let lastV = 0
 
     for (let i = 0; i < N * 3; i++) {
       const t = i * dt
@@ -36,10 +39,36 @@ export default function HysteresisExplorer() {
       if (Math.abs(I) > Compliance) I = Math.sign(I) * Compliance
       const dw = muV * ron / (D * D) * I * dt * freq * 1e13
       w = Math.min(1, Math.max(0, w + dw))
-      if (i >= N) points.push([V, I * 1000]) // mA
+
+      if (i >= N) {
+        const point = [V, I * 1000] // mA
+        points.push(point)
+
+        // Separate forward and reverse paths
+        if (V > lastV) {
+          // Voltage rising → forward path
+          forwardPath.push(point)
+        } else {
+          // Voltage falling → reverse path
+          reversePath.push(point)
+        }
+      }
+      lastV = V
     }
-    return points
+    return { points, forwardPath, reversePath }
   }, [muV])
+
+  // Calculate hysteresis loop area using Shoelace formula
+  const calculateLoopArea = useCallback((points) => {
+    if (points.length < 3) return 0
+    let area = 0
+    for (let i = 0; i < points.length; i++) {
+      const p1 = points[i]
+      const p2 = points[(i + 1) % points.length]
+      area += p1[0] * p2[1] - p2[0] * p1[1]
+    }
+    return Math.abs(area) / 2 // Shoelace formula
+  }, [])
 
   const draw = useCallback((ctx, w, h, freq, amp, animPhase, ron, roff) => {
     ctx.clearRect(0, 0, w, h)
@@ -50,8 +79,12 @@ export default function HysteresisExplorer() {
     ctx.fillStyle = isDark ? '#0f172a' : '#f8fafc'
     ctx.fillRect(0, 0, w, h)
 
-    const loop = computeLoop(freq, amp, ron, roff)
+    const loopData = computeLoop(freq, amp, ron, roff)
+    const { points: loop, forwardPath, reversePath } = loopData
     if (!loop.length) return
+
+    // Calculate loop area (area between forward and reverse paths)
+    const loopArea = calculateLoopArea(loop)
 
     // find ranges
     const vMax = Math.max(...loop.map(p => Math.abs(p[0]))) * 1.1
@@ -93,21 +126,65 @@ export default function HysteresisExplorer() {
     ctx.fillText('I (mA)', 0, 0)
     ctx.restore()
 
-    // Hysteresis loop — gradient color
+    // Draw hysteresis loop with separate forward and reverse paths
     ctx.lineWidth = 2.5
     ctx.lineJoin = 'round'
 
-    for (let i = 1; i < loop.length; i++) {
-      const t = i / loop.length
-      const r = Math.round(59 + t * (236 - 59))
-      const g = Math.round(130 + t * (72 - 130))
-      const b = Math.round(246 + t * (153 - 246))
-      ctx.strokeStyle = `rgb(${r},${g},${b})`
+    // Fill the area between forward and reverse paths
+    const areaRatio = Math.min(loopArea / 10, 1)
+    ctx.fillStyle = isDark
+      ? `rgba(239, 68, 68, ${0.15 * areaRatio})`
+      : `rgba(239, 68, 68, ${0.1 * areaRatio})`
+    ctx.beginPath()
+    if (forwardPath.length > 1) {
+      ctx.moveTo(toX(forwardPath[0][0]), toY(forwardPath[0][1]))
+      for (let i = 1; i < forwardPath.length; i++) {
+        ctx.lineTo(toX(forwardPath[i][0]), toY(forwardPath[i][1]))
+      }
+      // Connect reverse path back
+      for (let i = reversePath.length - 1; i >= 0; i--) {
+        ctx.lineTo(toX(reversePath[i][0]), toY(reversePath[i][1]))
+      }
+      ctx.closePath()
+      ctx.fill()
+    }
+
+    // Draw forward path (voltage rising) — BLUE
+    ctx.strokeStyle = '#3b82f6'
+    ctx.lineWidth = 2.5
+    if (forwardPath.length > 1) {
       ctx.beginPath()
-      ctx.moveTo(toX(loop[i - 1][0]), toY(loop[i - 1][1]))
-      ctx.lineTo(toX(loop[i][0]), toY(loop[i][1]))
+      ctx.moveTo(toX(forwardPath[0][0]), toY(forwardPath[0][1]))
+      for (let i = 1; i < forwardPath.length; i++) {
+        ctx.lineTo(toX(forwardPath[i][0]), toY(forwardPath[i][1]))
+      }
       ctx.stroke()
     }
+
+    // Draw reverse path (voltage falling) — RED/ORANGE
+    ctx.strokeStyle = '#ef4444'
+    ctx.lineWidth = 2.5
+    if (reversePath.length > 1) {
+      ctx.beginPath()
+      ctx.moveTo(toX(reversePath[0][0]), toY(reversePath[0][1]))
+      for (let i = 1; i < reversePath.length; i++) {
+        ctx.lineTo(toX(reversePath[i][0]), toY(reversePath[i][1]))
+      }
+      ctx.stroke()
+    }
+
+    // Legend for paths
+    ctx.font = '9px Inter, sans-serif'
+    ctx.fillStyle = '#3b82f6'
+    ctx.fillRect(w - 160, h - 30, 8, 8)
+    ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b'
+    ctx.textAlign = 'left'
+    ctx.fillText('Forward (V↑)', w - 150, h - 24)
+
+    ctx.fillStyle = '#ef4444'
+    ctx.fillRect(w - 160, h - 18, 8, 8)
+    ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b'
+    ctx.fillText('Reverse (V↓)', w - 150, h - 12)
 
     // Animated dot
     const idx = Math.floor(((animPhase % 1) * loop.length + loop.length) % loop.length)
@@ -133,12 +210,35 @@ export default function HysteresisExplorer() {
     ctx.fillStyle = '#10b981'
     ctx.fillText(`ON-OFF Ratio = ${(roff/ron).toFixed(0)}:1`, 35, 75)
 
+    // Loop area display with color gradient based on size
+    const maxArea = 10 // Normalized maximum for color scaling
+    const displayAreaRatio = Math.min(loopArea / maxArea, 1)
+    const areaColor = displayAreaRatio > 0.7 ? '#ef4444' : displayAreaRatio > 0.4 ? '#f59e0b' : '#10b981'
+    ctx.fillStyle = areaColor
+    ctx.font = 'bold 13px Inter, sans-serif'
+    ctx.textAlign = 'right'
+    ctx.fillText(`Loop Area = ${loopArea.toFixed(3)} V·mA`, w - 35, 30)
+
+    // Energy dissipation indicator (proportional to loop area)
+    const energyBar = Math.min((loopArea / maxArea) * 100, 100)
+    ctx.fillStyle = isDark ? 'rgba(148,163,184,0.3)' : 'rgba(71,85,105,0.2)'
+    ctx.fillRect(w - 150, 42, 115, 8)
+    ctx.fillStyle = areaColor
+    ctx.fillRect(w - 150, 42, (energyBar / 100) * 115, 8)
+    ctx.strokeStyle = areaColor
+    ctx.lineWidth = 1
+    ctx.strokeRect(w - 150, 42, 115, 8)
+    ctx.fillStyle = isDark ? '#cbd5e1' : '#475569'
+    ctx.font = '9px Inter, sans-serif'
+    ctx.textAlign = 'right'
+    ctx.fillText('Energy dissipation', w - 35, 60)
+
     // "Pinched at origin" label
     ctx.fillStyle = '#f59e0b'
     ctx.font = '10px Inter, sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('pinched at origin →', w / 2 + 40, h / 2 - 6)
-  }, [computeLoop])
+  }, [computeLoop, calculateLoopArea])
 
   useEffect(() => {
     if (!isAnimating) return
@@ -263,7 +363,10 @@ export default function HysteresisExplorer() {
       <div className="viz-note">
         <div><strong>Physics Model:</strong> Strukov et al. (2008) linear drift with memristive behavior</div>
         <div><strong>Current Values:</strong> LRS (ON) = {Ron.toFixed(0)}Ω, HRS (OFF) = {Roff.toFixed(0)}Ω, ON-OFF Ratio = {(Roff/Ron).toFixed(0)}:1</div>
-        <div><strong>Observation:</strong> As ON-OFF ratio increases, the hysteresis loop expands (wider and taller). The yellow dot traces the real-time operating point.</div>
+        <div><strong>Hysteresis Effect:</strong> 🔵 Forward path (voltage ↑) and 🔴 Reverse path (voltage ↓) are DIFFERENT curves. The gap between them is the hysteresis loop area.</div>
+        <div><strong>Physical Meaning:</strong> Area = Energy dissipated per cycle. Higher ON-OFF ratio → wider gap → larger area → more energy loss</div>
+        <div><strong>Memory Effect:</strong> The memristor "remembers" where it came from. Going UP takes a different path than going DOWN due to state variable (filament width) evolution.</div>
+        <div><strong>Experiment:</strong> Increase ON-OFF Ratio → watch the forward (blue) and reverse (red) paths separate more. This is true hysteresis!</div>
       </div>
     </div>
   )
