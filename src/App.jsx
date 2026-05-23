@@ -7,6 +7,7 @@ import CrossbarVMM from './components/visualizations/CrossbarVMM'
 import CircuitElements from './components/visualizations/CircuitElements'
 import DeviceStackBuilder from './components/visualizations/DeviceStackBuilder'
 import PulseSimulator from './components/visualizations/PulseSimulator'
+import MaterialsScience from './components/sections/MaterialsScience'
 import { qaData, qaCategories, qaLevels } from './data/qa'
 import { timelineEvents } from './data/timeline'
 import { materials, materialFamilies } from './data/materials'
@@ -20,6 +21,7 @@ const NAV = [
   { id: 'principles', icon: '📐', label: 'Principles & Fundamentals' },
   { id: 'types', icon: '🗂', label: 'Types & Positioning' },
   { section: 'DEVICES & MATERIALS' },
+  { id: 'materialsscience', icon: '⚛️', label: 'Materials Science' },
   { id: 'materials', icon: '🧪', label: 'Materials Database' },
   { id: 'stackbuilder', icon: '🏗', label: 'Device Stack Builder' },
   { id: 'devices', icon: '💾', label: 'Device & Stack' },
@@ -1439,6 +1441,7 @@ export default function App() {
       case 'physics': return <CorePhysics depth={depth} />
       case 'principles': return <PrinciplesSection depth={depth} />
       case 'types': return <TypesSection depth={depth} />
+      case 'materialsscience': return <MaterialsScience />
       case 'materials': return <MaterialsSection depth={depth} />
       case 'devices': return <DevicesSection depth={depth} />
       case 'characterization': return <CharacterizationSection depth={depth} />
