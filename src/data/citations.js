@@ -1,0 +1,135 @@
+// Core citation store — single source of truth
+// claimType: 'theory' | 'measurement' | 'review' | 'market' | 'device'
+
+export const citations = {
+  chua1971: {
+    id: 'chua1971',
+    authors: 'Chua, L. O.',
+    year: 1971,
+    title: 'Memristor — The Missing Circuit Element',
+    venue: 'IEEE Transactions on Circuit Theory',
+    vol: '18(5)',
+    pages: '507–519',
+    doi: '10.1109/TCT.1971.1083337',
+    claimType: 'theory',
+    confidence: 'definitive — founding paper',
+  },
+  chua1976: {
+    id: 'chua1976',
+    authors: 'Chua, L. O. & Kang, S. M.',
+    year: 1976,
+    title: 'Memristive Devices and Systems',
+    venue: 'Proceedings of the IEEE',
+    vol: '64(2)',
+    pages: '209–223',
+    doi: '10.1109/PROC.1976.10092',
+    claimType: 'theory',
+    confidence: 'definitive — generalization to memristive systems',
+  },
+  strukov2008: {
+    id: 'strukov2008',
+    authors: 'Strukov, D. B., Snider, G. S., Stewart, D. R. & Williams, R. S.',
+    year: 2008,
+    title: 'The Missing Memristor Found',
+    venue: 'Nature',
+    vol: '453',
+    pages: '80–83',
+    doi: '10.1038/nature06932',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/18451858/',
+    claimType: 'device',
+    confidence: 'definitive — seminal experimental realization',
+  },
+  yang2013: {
+    id: 'yang2013',
+    authors: 'Yang, J. J., Strukov, D. B. & Stewart, D. R.',
+    year: 2013,
+    title: 'Memristive devices for computing',
+    venue: 'Nature Nanotechnology',
+    vol: '8',
+    pages: '13–24',
+    doi: '10.1038/nnano.2012.240',
+    claimType: 'review',
+    confidence: 'high — comprehensive review',
+  },
+  waser2007: {
+    id: 'waser2007',
+    authors: 'Waser, R. & Aono, M.',
+    year: 2007,
+    title: 'Nanoionics-based resistive switching memories',
+    venue: 'Nature Materials',
+    vol: '6',
+    pages: '833–840',
+    doi: '10.1038/nmat2023',
+    claimType: 'review',
+    confidence: 'high — mechanism foundations',
+  },
+  ielmini2025: {
+    id: 'ielmini2025',
+    authors: 'Ielmini, D. & Pedretti, G.',
+    year: 2025,
+    title: 'RRAM: Applications and Requirements for Memory and Computing',
+    venue: 'Chemical Reviews',
+    doi: '10.1021/acs.chemrev.4c00602',
+    claimType: 'review',
+    confidence: 'high — comprehensive modern review',
+  },
+  bci2025: {
+    id: 'bci2025',
+    authors: 'HKU Neuromorphic Team',
+    year: 2025,
+    title: '128k-cell memristor adaptive decoder for brain–computer interfaces',
+    venue: 'Nature Electronics',
+    url: 'https://hub.hku.hk/handle/10722/355817',
+    claimType: 'device',
+    confidence: 'high — peer-reviewed demonstration',
+  },
+  2dmaterials2024: {
+    id: '2dmaterials2024',
+    authors: 'Various',
+    year: 2024,
+    title: '2D-material memristors for neuromorphic and in-memory computing (review)',
+    venue: 'npj 2D Materials and Applications',
+    url: 'https://www.nature.com/articles/s41699-024-00522-4',
+    claimType: 'review',
+    confidence: 'high',
+  },
+  neuromorphic2024: {
+    id: 'neuromorphic2024',
+    authors: 'Various',
+    year: 2024,
+    title: 'Neuromorphic computing with memristive hardware',
+    venue: 'Nano Convergence',
+    url: 'https://link.springer.com/article/10.1186/s40580-024-00432-7',
+    claimType: 'review',
+    confidence: 'high',
+  },
+  marketsandmarkets2024: {
+    id: 'marketsandmarkets2024',
+    authors: 'MarketsandMarkets',
+    year: 2024,
+    title: 'Neuromorphic Chip Market Report',
+    venue: 'MarketsandMarkets Research',
+    url: 'https://www.marketsandmarkets.com/Market-Reports/neuromorphic-chip-market-227703024.html',
+    claimType: 'market',
+    confidence: 'medium — market reports vary widely; treat as one estimate',
+  },
+  precedence2024: {
+    id: 'precedence2024',
+    authors: 'Precedence Research',
+    year: 2024,
+    title: 'Neuromorphic Computing Market Size, Share & Forecast 2024–2034',
+    venue: 'Precedence Research',
+    claimType: 'market',
+    confidence: 'medium — independent estimate; range differs from MarketsandMarkets',
+  },
+}
+
+export function getCitation(id) {
+  return citations[id] || null
+}
+
+export function formatCitation(id) {
+  const c = citations[id]
+  if (!c) return ''
+  return `${c.authors} (${c.year}). "${c.title}." ${c.venue}${c.vol ? `, ${c.vol}` : ''}${c.pages ? `, pp. ${c.pages}` : ''}. DOI: ${c.doi || 'N/A'}`
+}
